@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四大主题词汇背诵系统 v2.0</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 { margin: 0 0 10px 0; font-size: 1.5rem; }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-size: 0.9rem;
+        }
+
+        button.active { background: var(--primary); color: white; }
+        button:hover { transform: translateY(-1px); filter: brightness(0.95); }
+        button:active { transform: translateY(0); }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+        }
+
+        .category-tag {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* 顶部功能区：发音 */
+        .top-tools {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+        }
+        .sound-btn {
+            background: #e0f2fe;
+            color: #0284c7;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .question-word {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.3;
+        }
+
+        .hint-text {
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 15px;
+            height: 24px;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+        .hint-reveal {
+            color: var(--error);
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+            font-weight: bold;
+        }
+        .feedback.correct { background: #dcfce7; color: #15803d; display: block; }
+        .feedback.wrong { background: #fee2e2; color: #b91c1c; display: block; }
+
+        .tools {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 10px;
+        }
+
+        .hint-btn { background: var(--warning); color: white; flex: 1; }
+        .nav-btn { background: #64748b; color: white; flex: 1; }
+
+        /* Mistake Notebook Styles */
+        .mistake-section {
+            margin-top: 40px;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-sizing: border-box;
+        }
+        
+        .mistake-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .mistake-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            align-items: center;
+        }
+        .mistake-item span { font-size: 0.9rem; }
+        .mistake-item .word { font-weight: bold; color: var(--error); cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>VOCAB MASTER v2.0</h1>
+    </header>
+
+    <div class="controls" id="categoryControls">
+        <button class="active" onclick="setCategory('all')">全部</button>
+        <button onclick="setCategory('AIGC')">AIGC</button>
+        <button onclick="setCategory('NEV')">新能源</button>
+        <button onclick="setCategory('Live')">直播电商</button>
+        <button onclick="setCategory('Tech')">科技自立</button>
+    </div>
+
+    <div class="controls">
+        <button id="modeBtn" onclick="toggleMode()">当前模式：看中文写英文 (默写)</button>
+    </div>
+
+    <div class="card">
+        <div class="category-tag" id="currentCategory">AIGC</div>
+        
+        <div class="top-tools">
+            <button class="sound-btn" onclick="speakCurrentWord()" title="朗读单词">🔊</button>
+        </div>
+        
+        <div class="question-word" id="question">Loading...</div>
+        <div class="hint-text" id="hintBox"></div>
+
+        <div class="input-group">
+            <input type="text" id="answerInput" placeholder="在此输入答案..." autocomplete="off">
+            <button class="action-btn" onclick="checkAnswer()">提交</button>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+
+        <div class="tools">
+            <button class="nav-btn" onclick="prevWord()">⬅️ 上一个</button>
+            <button class="hint-btn" onclick="showHint()" id="hintBtn">💡 提示</button>
+            <button class="nav-btn" onclick="nextWord()">下一个 ➡️</button>
+        </div>
+    </div>
+
+    <div class="mistake-section" id="mistakeSection" style="display:none;">
+        <h3>📕 错题本 (<span id="mistakeCount">0</span>)</h3>
+        <p style="font-size:0.8rem; color:#64748b;">点击单词可朗读</p>
+        <ul class="mistake-list" id="mistakeList"></ul>
+        <button onclick="clearMistakes()" style="margin-top:10px; font-size:0.8rem; background:#fee2e2; color:#b91c1c;">清空错题本</button>
+    </div>
+</div>
+
+<script>
+    // 词汇数据库
+    const vocabularyDB = [
+        // Source: AIGC
+        { en: "generative AI", cn: "生成式人工智能", ipa: "/ˈdʒɛnərətɪv ˌeɪˈaɪ/", tag: "AIGC" },
+        { en: "large language model (LLM)", cn: "大语言模型", ipa: "/lɑːrdʒ ˈlæŋɡwɪdʒ ˈmɒdəl/", tag: "AIGC" },
+        { en: "foundation model", cn: "基础模型", ipa: "/faʊnˈdeɪʃən ˈmɒdəl/", tag: "AIGC" },
+        { en: "multimodal model", cn: "多模态模型", ipa: "/ˌmʌltiˈmoʊdəl ˈmɒdəl/", tag: "AIGC" },
+        { en: "prompt engineering", cn: "提示词工程", ipa: "/prɒmpt ˌendʒəˈnɪərɪŋ/", tag: "AIGC" },
+        { en: "fine-tuning", cn: "微调", ipa: "/faɪn ˈtuːnɪŋ/", tag: "AIGC" },
+        { en: "supervised learning", cn: "监督学习", ipa: "/ˈsuːpərvaɪzd ˈlɜːrnɪŋ/", tag: "AIGC" },
+        { en: "reinforcement learning", cn: "强化学习", ipa: "/ˌriːɪnˈfɔːrsmənt ˈlɜːrnɪŋ/", tag: "AIGC" },
+        { en: "hallucination", cn: "AI幻觉", ipa: "/həˌluːsɪˈneɪʃən/", tag: "AIGC" },
+        { en: "model alignment", cn: "模型对齐", ipa: "/əˈlaɪnmənt/", tag: "AIGC" },
+        { en: "inference", cn: "推理", ipa: "/ˈɪnfərəns/", tag: "AIGC" },
+        { en: "training data", cn: "训练数据", ipa: "/ˈtreɪnɪŋ ˈdeɪtə/", tag: "AIGC" },
+        { en: "parameter", cn: "参数", ipa: "/pəˈræmɪtər/", tag: "AIGC" },
+        { en: "token", cn: "词元", ipa: "/ˈtoʊkən/", tag: "AIGC" },
+        { en: "context window", cn: "上下文窗口", ipa: "/ˈkɒntekst ˈwɪndoʊ/", tag: "AIGC" },
+        { en: "vector embedding", cn: "向量嵌入", ipa: "/ˈvɛktər ɪmˈbɛdɪŋ/", tag: "AIGC" },
+        { en: "retrieval-augmented generation (RAG)", cn: "检索增强生成", ipa: "/rɪˈtriːvəl.../", tag: "AIGC" },
+        { en: "API integration", cn: "API集成", ipa: "/ˌeɪpiːˈaɪ ˌɪntɪˈgreɪʃən/", tag: "AIGC" },
+        { en: "model latency", cn: "模型延迟", ipa: "/ˈleɪtənsi/", tag: "AIGC" },
+        { en: "compute power", cn: "算力", ipa: "/kəmˈpjuːt ˈpaʊər/", tag: "AIGC" },
+        { en: "bias and fairness", cn: "偏见与公平", ipa: "/baɪəs ænd ˈfεərnəs/", tag: "AIGC" },
+        { en: "data privacy", cn: "数据隐私", ipa: "/ˈdeɪtə ˈpraɪvəsi/", tag: "AIGC" },
+        { en: "intellectual property", cn: "知识产权", ipa: "/ˌɪntəˈlɛktʃuəl ˈprɒpərti/", tag: "AIGC" },
+        { en: "content authenticity", cn: "内容真实性", ipa: "/kɒnˈtɛnt ɔːˈθentɪsɪti/", tag: "AIGC" },
+        { en: "agentic AI", cn: "自主型AI", ipa: "/eɪˈdʒɛntɪk eɪˈaɪ/", tag: "AIGC" },
+
+        // Source: NEV
+        { en: "new energy vehicle (NEV)", cn: "新能源车", ipa: "/nuː ˈɛnərdʒi ˈviːəkəl/", tag: "NEV" },
+        { en: "electric vehicle (EV)", cn: "纯电动汽车", ipa: "/ɪˈlɛktrɪk ˈviːəkəl/", tag: "NEV" },
+        { en: "battery electric vehicle (BEV)", cn: "纯电动车", ipa: "/ˈbætəri ɪˈlɛktrɪk ˈviːəkəl/", tag: "NEV" },
+        { en: "plug-in hybrid electric vehicle (PHEV)", cn: "插电混动", ipa: "/plʌɡ ɪn ˈhaɪbrɪd/", tag: "NEV" },
+        { en: "fuel cell vehicle (FCV)", cn: "燃料电池车", ipa: "/ˈfjuːəl sɛl ˈviːəkəl/", tag: "NEV" },
+        { en: "lithium-ion battery", cn: "锂电池", ipa: "/ˈlɪθiəm ˈaɪən.../", tag: "NEV" },
+        { en: "solid-state battery", cn: "固态电池", ipa: "/ˈsɒlɪd steɪt ˈbætəri/", tag: "NEV" },
+        { en: "energy density", cn: "能量密度", ipa: "/ˈɛnərdʒi ˈdɛnsəti/", tag: "NEV" },
+        { en: "charging infrastructure", cn: "充电基础设施", ipa: "/ˈtʃɑːrdʒɪŋ ˈɪnfrəstrʌktʃər/", tag: "NEV" },
+        { en: "fast charging", cn: "快充", ipa: "/fæst ˈtʃɑːrdʒɪŋ/", tag: "NEV" },
+        { en: "battery swap", cn: "换电", ipa: "/ˈbætəri swɒp/", tag: "NEV" },
+        { en: "range anxiety", cn: "续航焦虑", ipa: "/reɪndʒ æŋˈzaɪəti/", tag: "NEV" },
+        { en: "regenerative braking", cn: "再生制动", ipa: "/ˌrɛdʒəˈnerətɪv.../", tag: "NEV" },
+        { en: "powertrain", cn: "动力系统", ipa: "/ˈpaʊərtreɪn/", tag: "NEV" },
+        { en: "thermal management", cn: "热管理", ipa: "/ˈθɜːrməl ˈmænɪdʒmənt/", tag: "NEV" },
+        { en: "carbon neutrality", cn: "碳中和", ipa: "/ˈkɑːrbən njuːˈtræləti/", tag: "NEV" },
+        { en: "lifecycle emissions", cn: "全生命周期排放", ipa: "/ˈlaɪfsaɪkl ɪˈmɪʃənz/", tag: "NEV" },
+        { en: "smart mobility", cn: "智慧出行", ipa: "/smɑːrt məˈbɪləti/", tag: "NEV" },
+        { en: "autonomous driving", cn: "自动驾驶", ipa: "/ɔːˈtɒnəməs ˈdraɪvɪŋ/", tag: "NEV" },
+        { en: "vehicle-to-grid (V2G)", cn: "车网互动", ipa: "/ˈviːəkəl tuː ɡrɪd/", tag: "NEV" },
+        { en: "rare earth materials", cn: "稀土", ipa: "/reə(r) ɜːrθ.../", tag: "NEV" },
+        { en: "battery recycling", cn: "电池回收", ipa: "/ˈbætəri riːˈsaɪklɪŋ/", tag: "NEV" },
+        { en: "supply chain resilience", cn: "供应链韧性", ipa: "/səˈplaɪ tʃeɪn rɪˈzɪliəns/", tag: "NEV" },
+        { en: "total cost of ownership (TCO)", cn: "全生命周期成本", ipa: "/ˈtəʊtəl kɒst.../", tag: "NEV" },
+        { en: "over-the-air update (OTA)", cn: "远程升级", ipa: "/ˌəʊvər ði ˈeər.../", tag: "NEV" },
+
+        // Source: Live Commerce
+        { en: "live commerce", cn: "直播电商", ipa: "/laɪv ˈkɒmɜːrs/", tag: "Live" },
+        { en: "livestreaming", cn: "直播", ipa: "/ˈlaɪvstriːmɪŋ/", tag: "Live" },
+        { en: "host / streamer", cn: "主播", ipa: "/həʊst/", tag: "Live" },
+        { en: "product demonstration", cn: "产品展示", ipa: "/ˈprɒdʌkt.../", tag: "Live" },
+        { en: "conversion rate", cn: "转化率", ipa: "/kənˈvɜːʃən.../", tag: "Live" },
+        { en: "engagement", cn: "互动度", ipa: "/ɪnˈɡeɪdʒmənt/", tag: "Live" },
+        { en: "call to action (CTA)", cn: "行动号召", ipa: "/kɔːl tuː ˈækʃən/", tag: "Live" },
+        { en: "traffic boosting", cn: "引流", ipa: "/ˈtræfɪk.../", tag: "Live" },
+        { en: "algorithmic recommendation", cn: "算法推荐", ipa: "/ˌælɡəˈrɪðmɪk.../", tag: "Live" },
+        { en: "impulse buying", cn: "冲动消费", ipa: "/ˈɪmpʌls ˈbaɪɪŋ/", tag: "Live" },
+        { en: "flash sale", cn: "限时抢购", ipa: "/flæʃ seɪl/", tag: "Live" },
+        { en: "user retention", cn: "用户留存", ipa: "/ˈjuːzər.../", tag: "Live" },
+        { en: "influencer marketing", cn: "网红营销", ipa: "/ˈɪnfluənsər.../", tag: "Live" },
+        { en: "brand authenticity", cn: "品牌真实感", ipa: "/brænd ɔːˈθentɪsɪti/", tag: "Live" },
+        { en: "merchandise return rate", cn: "退货率", ipa: "/ˈmɜːrtʃəndaɪz.../", tag: "Live" },
+        { en: "logistics fulfillment", cn: "物流履约", ipa: "/ləˈdʒɪstɪks.../", tag: "Live" },
+        { en: "digital payment", cn: "数字支付", ipa: "/ˈdɪdʒɪtəl.../", tag: "Live" },
+        { en: "average order value (AOV)", cn: "客单价", ipa: "/ˈævərɪdʒ.../", tag: "Live" },
+        { en: "viewership", cn: "观看人数", ipa: "/ˈvjuːərʃɪp/", tag: "Live" },
+        { en: "playback", cn: "回放量", ipa: "/ˈpleɪbæk/", tag: "Live" },
+        { en: "content moderation", cn: "内容审核", ipa: "/ˈkɒntent.../", tag: "Live" },
+        { en: "consumer protection", cn: "消费者保护", ipa: "/kənˈsjuːmər.../", tag: "Live" },
+        { en: "data analytics", cn: "数据分析", ipa: "/ˈdeɪtə.../", tag: "Live" },
+        { en: "personalization", cn: "个性化", ipa: "/ˌpɜːrsənələˈzeɪʃən/", tag: "Live" },
+        { en: "viewer retention rate", cn: "观众留存率", ipa: "/ˈvjuːər.../", tag: "Live" },
+
+        // Source: Tech Self-reliance
+        { en: "technological self-reliance", cn: "科技自立自强", ipa: "/ˌtɛknəˈlɒdʒɪkəl sɛlf.../", tag: "Tech" },
+        { en: "strategic autonomy", cn: "战略自主", ipa: "/strəˈtiːdʒɪk ɔːˈtɒnəmi/", tag: "Tech" },
+        { en: "core technologies", cn: "核心技术", ipa: "/kɔːr tɛkˈnɒlədʒiz/", tag: "Tech" },
+        { en: "innovation ecosystem", cn: "创新生态", ipa: "/ˌɪnəˈveɪʃən.../", tag: "Tech" },
+        { en: "key enabling technologies", cn: "关键使能技术", ipa: "/kiː ɪˈneɪblɪŋ.../", tag: "Tech" },
+        { en: "supply chain security", cn: "供应链安全", ipa: "/səˈplaɪ tʃeɪn.../", tag: "Tech" },
+        { en: "technological sovereignty", cn: "科技主权", ipa: "/ˌtɛknəˈlɒdʒɪkəl.../", tag: "Tech" },
+        { en: "indigenous innovation", cn: "自主创新", ipa: "/ɪnˈdɪdʒɪnəs.../", tag: "Tech" },
+        { en: "intellectual property rights", cn: "知识产权", ipa: "/ˌɪntəˈlɛktʃuəl.../", tag: "Tech" },
+        { en: "research and development", cn: "研发", ipa: "/ˌɑːr ən ˈdiː/", tag: "Tech" },
+        { en: "semiconductor manufacturing", cn: "半导体制造", ipa: "/ˌsɛmɪ.../", tag: "Tech" },
+        { en: "critical infrastructure", cn: "关键基础设施", ipa: "/ˈkrɪtɪkəl.../", tag: "Tech" },
+        { en: "technological bottleneck", cn: "技术瓶颈", ipa: "/ˌtɛknəˈlɒdʒɪkəl.../", tag: "Tech" },
+        { en: "strategic emerging industries", cn: "战略性新兴产业", ipa: "/strəˈtiːdʒɪk.../", tag: "Tech" },
+        { en: "high-tech manufacturing", cn: "高技术制造", ipa: "/haɪ tɛk.../", tag: "Tech" },
+        { en: "technology transfer", cn: "技术转移", ipa: "/tɛkˈnɒlədʒi.../", tag: "Tech" },
+        { en: "knowledge-intensive industries", cn: "知识密集型产业", ipa: "/ˈnɒlɪdʒ.../", tag: "Tech" },
+        { en: "open innovation", cn: "开放式创新", ipa: "/ˈəʊpən.../", tag: "Tech" },
+        { en: "digital infrastructure", cn: "数字基础设施", ipa: "/ˈdɪdʒɪtəl.../", tag: "Tech" },
+        { en: "technological resilience", cn: "技术韧性", ipa: "/ˌtɛknəˈlɒdʒɪkəl.../", tag: "Tech" },
+        { en: "national innovation capacity", cn: "国家创新能力", ipa: "/ˈnæʃənəl.../", tag: "Tech" },
+        { en: "frontier technologies", cn: "前沿技术", ipa: "/ˈfrʌntɪər.../", tag: "Tech" },
+        { en: "talent cultivation", cn: "人才培养", ipa: "/ˈtælənt.../", tag: "Tech" },
+        { en: "industrial upgrading", cn: "产业升级", ipa: "/ɪnˈdʌstriəl.../", tag: "Tech" },
+        { en: "self-sustaining innovation capability", cn: "自我持续创新能力", ipa: "/sɛlf səˈsteɪnɪŋ.../", tag: "Tech" }
+    ];
+
+    // State Variables
+    let currentList = [];
+    let currentIndex = 0;
+    let mode = 'cn-to-en'; // 'cn-to-en' or 'en-to-cn'
+    let mistakes = [];
+    let hintClickCount = 0; // NEW: Counter for hint clicks
+
+    // Initialization
+    window.onload = function() {
+        setCategory('all');
+        
+        // Bind Enter key
+        document.getElementById("answerInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                checkAnswer();
+            }
+        });
+    };
+
+    // Logic Functions
+    function setCategory(cat) {
+        const buttons = document.querySelector('#categoryControls').children;
+        for (let btn of buttons) {
+            btn.classList.remove('active');
+            if (btn.innerText.includes(cat === 'all' ? '全部' : cat === 'Live' ? '直播' : cat === 'Tech' ? '科技' : cat === 'NEV' ? '新能源' : cat)) {
+                btn.classList.add('active');
+            }
+        }
+
+        if (cat === 'all') {
+            currentList = [...vocabularyDB];
+        } else {
+            currentList = vocabularyDB.filter(item => item.tag === cat);
+        }
+
+        currentList.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        loadWord();
+    }
+
+    function toggleMode() {
+        mode = mode === 'cn-to-en' ? 'en-to-cn' : 'cn-to-en';
+        const btn = document.getElementById('modeBtn');
+        btn.innerText = mode === 'cn-to-en' ? '当前模式：看中文写英文 (默写)' : '当前模式：看英文写中文 (翻译)';
+        loadWord();
+    }
+
+    function loadWord() {
+        if (currentList.length === 0) return;
+        
+        const item = currentList[currentIndex];
+        const questionEl = document.getElementById('question');
+        const hintEl = document.getElementById('hintBox');
+        const inputEl = document.getElementById('answerInput');
+        const feedbackEl = document.getElementById('feedback');
+        const catTag = document.getElementById('currentCategory');
+        const hintBtn = document.getElementById('hintBtn');
+
+        // Reset UI states
+        feedbackEl.className = 'feedback';
+        feedbackEl.style.display = 'none';
+        hintEl.innerText = '';
+        hintEl.className = 'hint-text'; // remove reveal class
+        inputEl.value = '';
+        inputEl.focus();
+        catTag.innerText = item.tag;
+        hintBtn.innerText = "💡 提示"; // Reset button text
+        
+        // Reset Logic
+        hintClickCount = 0; 
+
+        if (mode === 'cn-to-en') {
+            questionEl.innerText = item.cn;
+            inputEl.placeholder = "输入英文单词...";
+        } else {
+            questionEl.innerText = item.en;
+            inputEl.placeholder = "输入中文含义...";
+        }
+    }
+
+    // NEW: Pronunciation Function
+    function speakCurrentWord() {
+        if (currentList.length === 0) return;
+        const item = currentList[currentIndex];
+        
+        // Use Web Speech API
+        const utterance = new SpeechSynthesisUtterance(item.en);
+        utterance.lang = 'en-US'; // American English
+        utterance.rate = 0.9; // Slightly slower for clarity
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function speakText(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; 
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // UPDATED: Hint Function with 3-Click Logic
+    function showHint() {
+        const item = currentList[currentIndex];
+        const hintEl = document.getElementById('hintBox');
+        const hintBtn = document.getElementById('hintBtn');
+        
+        hintClickCount++;
+
+        if (hintClickCount === 1) {
+            // Level 1: Standard Hint
+            if (mode === 'cn-to-en') {
+                hintEl.innerText = `IPA: ${item.ipa}  |  首字母: ${item.en.charAt(0)}`;
+            } else {
+                hintEl.innerText = `IPA: ${item.ipa}  |  首字: ${item.cn.charAt(0)}`;
+            }
+            hintBtn.innerText = "💡 再点显示更多";
+        } else if (hintClickCount === 2) {
+            // Level 2: Encouragement
+            hintEl.innerText += " (再点一次显示答案)";
+            hintBtn.innerText = "💡 显示答案";
+        } else if (hintClickCount >= 3) {
+            // Level 3: Reveal Answer
+            const answer = mode === 'cn-to-en' ? item.en : item.cn;
+            hintEl.innerHTML = `答案: <span class="hint-reveal">${answer}</span>`;
+            hintBtn.innerText = "💡 已显示";
+        }
+    }
+
+    function checkAnswer() {
+        const item = currentList[currentIndex];
+        const input = document.getElementById('answerInput').value.trim().toLowerCase();
+        const feedbackEl = document.getElementById('feedback');
+        let isCorrect = false;
+        
+        const cleanInput = input.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+        
+        if (mode === 'cn-to-en') {
+            const target = item.en.toLowerCase();
+            if (cleanInput === target.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"")) {
+                isCorrect = true;
+            }
+        } else {
+            if (input === item.cn || (input.length > 1 && item.cn.includes(input))) {
+                isCorrect = true;
+            }
+        }
+
+        if (isCorrect) {
+            feedbackEl.innerText = "🎉 回答正确!";
+            feedbackEl.className = 'feedback correct';
+            speakCurrentWord(); // Optional: Auto speak on correct
+            setTimeout(() => {
+                nextWord();
+            }, 1200);
+        } else {
+            feedbackEl.innerHTML = `❌ 错误! <br> 正确答案: ${mode === 'cn-to-en' ? item.en : item.cn}`;
+            feedbackEl.className = 'feedback wrong';
+            speakCurrentWord(); // Auto speak on error too so they hear it
+            addToMistakes(item);
+        }
+    }
+
+    function nextWord() {
+        // Increment Index
+        currentIndex = (currentIndex + 1) % currentList.length;
+        loadWord();
+    }
+
+    // NEW: Previous Word Function
+    function prevWord() {
+        // Decrement Index with wrap-around logic
+        currentIndex = (currentIndex - 1 + currentList.length) % currentList.length;
+        loadWord();
+    }
+
+    function addToMistakes(item) {
+        if (!mistakes.find(m => m.en === item.en)) {
+            mistakes.push(item);
+            renderMistakes();
+        }
+        document.getElementById('mistakeSection').style.display = 'block';
+    }
+
+    function renderMistakes() {
+        const list = document.getElementById('mistakeList');
+        const count = document.getElementById('mistakeCount');
+        list.innerHTML = '';
+        count.innerText = mistakes.length;
+
+        mistakes.forEach(m => {
+            const li = document.createElement('li');
+            li.className = 'mistake-item';
+            li.innerHTML = `
+                <span class="word" onclick="speakText('${m.en.replace(/'/g, "\\'")}')">🔊 ${m.en}</span>
+                <span>${m.cn}</span>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    function clearMistakes() {
+        mistakes = [];
+        renderMistakes();
+        document.getElementById('mistakeSection').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
